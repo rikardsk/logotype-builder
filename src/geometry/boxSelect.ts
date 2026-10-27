@@ -121,7 +121,7 @@ export function findItemsInBox(
     .map((g) => g.id);
 
   const shapeIds = shapes
-    .filter((s) => isShapeInBox(s, normalizedBox))
+    .filter((s) => s.visible !== false && isShapeInBox(s, normalizedBox))
     .map((s) => s.id);
 
   return { guideIds, shapeIds };

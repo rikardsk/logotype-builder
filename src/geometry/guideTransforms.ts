@@ -524,4 +524,48 @@ export function getCanvasViewBox(artboard: ArtboardConfig): string {
   return `${vx} ${vy} ${viewSize} ${viewSize}`;
 }
 
+export function resizeGuide(guide: GuideShape, factor: number): GuideShape {
+  if (factor <= 0) return guide;
+
+  if ((guide.type === 'line' || guide.type === 'parallel') && guide.p1 && guide.p2) {
+    const mx = (guide.p1.x + guide.p2.x) / 2;
+    const my = (guide.p1.y + guide.p2.y) / 2;
+    const dx = (guide.p2.x - mx) * factor;
+    const dy = (guide.p2.y - my) * factor;
+    if (Math.hypot(dx, dy) < 2) return guide;
+
+    const p1 = { x: Math.round(mx - dx), y: Math.round(my - dy) };
+    const p2 = { x: Math.round(mx + dx), y: Math.round(my + dy) };
+
+    if (guide.type === 'line') {
+      return createLineGuide(guide.id, p1.x, p1.y, p2.x, p2.y);
+    }
+    return createParallelGuide(guide.id, p1.x, p1.y, p2.x, p2.y, guide.spacing || 40);
+  }
+
+  if (guide.type === 'rect' && guide.points && guide.points.length === 4) {
+    const center = getQuadCenter(guide.points);
+    const newPoints = guide.points.map((p) => ({
+      x: Math.round(center.x + (p.x - center.x) * factor),
+      y: Math.round(center.y + (p.y - center.y) * factor),
+    })) as [Point2D, Point2D, Point2D, Point2D];
+    return createQuadGuide(guide.id, newPoints);
+  }
+
+  if (guide.cx !== undefined && guide.cy !== undefined) {
+    const rx = Math.max(5, Math.round((guide.rx || 50) * factor));
+    if (guide.type === 'circle') {
+      return createCircleGuide(guide.id, guide.cx, guide.cy, rx);
+    }
+    if (guide.type === 'parallel-circle') {
+      return createParallelCircleGuide(guide.id, guide.cx, guide.cy, rx, guide.spacing || 40);
+    }
+    const ry = Math.max(5, Math.round((guide.ry || 30) * factor));
+    return createRotatedEllipseGuide(guide.id, guide.cx, guide.cy, rx, ry, guide.rotation || 0);
+  }
+
+  return guide;
+}
+
+
 

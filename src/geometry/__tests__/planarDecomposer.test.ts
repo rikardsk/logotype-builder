@@ -65,4 +65,48 @@ describe('planarDecomposer', () => {
       expect(/[cC]/.test(f.pathData)).toBe(true);
     }
   });
+
+  it('does NOT slice a distant circle with an unextended line guide whose visible endpoints do not reach the circle', () => {
+    // Circle at top-right
+    const circle = createCircleGuide('c-top-right', 600, 150, 60);
+    // Line at bottom-left pointing towards top-right, but stopping far before the circle
+    const line = createLineGuide('l-bottom-left', 100, 650, 250, 500);
+
+    const faces = decomposeGuidesToAtomicFaces([circle, line]);
+    // The circle must remain completely intact as 1 face, NOT sliced by invisible continuation lines
+    expect(faces.length).toBe(1);
+    expect(faces[0].bounds.width).toBeCloseTo(120, 0);
+    expect(faces[0].bounds.height).toBeCloseTo(120, 0);
+  });
+
+  it('does NOT slice a circle when line segment stops inside without crossing the boundary at 2 points', () => {
+    const circle = createCircleGuide('c', 400, 400, 100);
+    // Line that starts at the center and stops halfway to the boundary (length 50, radius 100)
+    const line = createLineGuide('l-short', 400, 400, 450, 400);
+
+    const faces = decomposeGuidesToAtomicFaces([circle, line]);
+    expect(faces.length).toBe(1);
+  });
+
+  it('keeps line cells whole and does not fracture them with their own boundary lines', () => {
+    // 4 crossing lines forming a 100x100 square in the center (from 300 to 400 in x and y)
+    const h1 = createLineGuide('h1', 200, 300, 500, 300);
+    const h2 = createLineGuide('h2', 200, 400, 500, 400);
+    const v1 = createLineGuide('v1', 300, 200, 300, 500);
+    const v2 = createLineGuide('v2', 400, 200, 400, 500);
+    const circle = createCircleGuide('c', 700, 100, 50);
+
+    const faces = decomposeGuidesToAtomicFaces([circle, h1, h2, v1, v2]);
+    expect(faces.length).toBe(2);
+
+    const squareCell = faces.find((f) => Math.abs(f.bounds.width - 100) < 5);
+    expect(squareCell).toBeDefined();
+    expect(squareCell?.bounds.width).toBeCloseTo(100, 0);
+    expect(squareCell?.bounds.height).toBeCloseTo(100, 0);
+
+    const circleCell = faces.find((f) => f.id !== squareCell?.id);
+    expect(circleCell).toBeDefined();
+    expect(circleCell?.bounds.width).toBeCloseTo(100, 0);
+    expect(circleCell?.bounds.height).toBeCloseTo(100, 0);
+  });
 });

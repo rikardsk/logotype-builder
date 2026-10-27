@@ -1,7 +1,12 @@
 import React, { useState, useMemo } from 'react';
-import { X, Copy, Check, Download, Image } from 'lucide-react';
+import { X, Copy, Check, Download, Image, FileCode } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { ArtboardConfig, ConstructedShape, GuideShape } from '../../geometry/types';
+import { ArtboardConfig, ConstructedShape, GuideShape, LogoProjectData } from '../../geometry/types';
+import {
+  embedProjectInSvg,
+  downloadProjectFile,
+  createProjectData,
+} from '../../geometry/projectSerialization';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -10,6 +15,7 @@ interface ExportModalProps {
   guides: GuideShape[];
   canvasBackground?: string;
   artboard?: ArtboardConfig;
+  projectData?: LogoProjectData;
 }
 
 function escapeXml(unsafe: string): string {
@@ -42,12 +48,25 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   guides,
   canvasBackground = '#121316',
   artboard = { x: 0, y: 0, width: 800, height: 800 },
+  projectData,
 }) => {
   const [activeTab, setActiveTab] = useState<'clean' | 'blueprint'>('clean');
   const [exportBg, setExportBg] = useState<'transparent' | 'canvas' | 'white' | 'black'>(
     canvasBackground === 'transparent' ? 'transparent' : 'canvas'
   );
   const [copied, setCopied] = useState(false);
+
+  const currentProject = useMemo(() => {
+    return (
+      projectData ||
+      createProjectData({
+        guides,
+        constructedShapes,
+        artboard,
+        canvasBackground,
+      })
+    );
+  }, [projectData, guides, constructedShapes, artboard, canvasBackground]);
 
   const effectiveBgColor = useMemo(() => {
     if (exportBg === 'transparent') return 'transparent';
@@ -61,9 +80,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       effectiveBgColor !== 'transparent'
         ? `  <rect x="${artboard.x}" y="${artboard.y}" width="${artboard.width}" height="${artboard.height}" fill="${effectiveBgColor}" />\n`
         : '';
-    const paths = constructedShapes.map(renderCleanShape).join('\n');
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${artboard.x} ${artboard.y} ${artboard.width} ${artboard.height}" width="${artboard.width}" height="${artboard.height}">\n${bgRect}${paths}\n</svg>`;
-  }, [constructedShapes, effectiveBgColor, artboard]);
+    const visibleShapes = constructedShapes.filter((s) => s.visible !== false);
+    const paths = visibleShapes.map(renderCleanShape).join('\n');
+    const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${artboard.x} ${artboard.y} ${artboard.width} ${artboard.height}" width="${artboard.width}" height="${artboard.height}">\n${bgRect}${paths}\n</svg>`;
+    return embedProjectInSvg(rawSvg, currentProject);
+  }, [constructedShapes, effectiveBgColor, artboard, currentProject]);
 
   const blueprintSvgString = useMemo(() => {
     const bgFill = effectiveBgColor === 'transparent' ? 'none' : effectiveBgColor;
@@ -74,10 +95,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       )
       .join('\n');
 
-    const shapeElements = constructedShapes.map(renderBlueprintShape).join('\n');
+    const visibleShapes = constructedShapes.filter((s) => s.visible !== false);
+    const shapeElements = visibleShapes.map(renderBlueprintShape).join('\n');
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${artboard.x} ${artboard.y} ${artboard.width} ${artboard.height}" width="${artboard.width}" height="${artboard.height}">\n  <rect x="${artboard.x}" y="${artboard.y}" width="${artboard.width}" height="${artboard.height}" fill="${bgFill}" />\n  <g id="guides">\n${guideElements}\n  </g>\n  <g id="shapes">\n${shapeElements}\n  </g>\n</svg>`;
-  }, [constructedShapes, guides, effectiveBgColor, artboard]);
+    const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${artboard.x} ${artboard.y} ${artboard.width} ${artboard.height}" width="${artboard.width}" height="${artboard.height}">\n  <rect x="${artboard.x}" y="${artboard.y}" width="${artboard.width}" height="${artboard.height}" fill="${bgFill}" />\n  <g id="guides">\n${guideElements}\n  </g>\n  <g id="shapes">\n${shapeElements}\n  </g>\n</svg>`;
+    return embedProjectInSvg(rawSvg, currentProject);
+  }, [constructedShapes, guides, effectiveBgColor, artboard, currentProject]);
 
   if (!isOpen) return null;
 
@@ -99,6 +122,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     a.click();
     URL.revokeObjectURL(url);
     confetti({ particleCount: 50, spread: 70, origin: { y: 0.8 } });
+    setTimeout(onClose, 400);
+  };
+
+  const handleDownloadProject = () => {
+    downloadProjectFile(currentProject);
+    confetti({ particleCount: 50, spread: 70, origin: { y: 0.8 } });
+    setTimeout(onClose, 400);
   };
 
   const createPngFromImage = (img: HTMLImageElement): string => {
@@ -137,6 +167,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       a.download = `logotype-${activeTab}-${Date.now()}.png`;
       a.click();
       confetti({ particleCount: 50, spread: 70, origin: { y: 0.8 } });
+      setTimeout(onClose, 400);
     };
     img.src = url;
   };
@@ -270,15 +301,26 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-between pt-2">
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition-all active:scale-95 border border-white/10"
-          >
-            {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-            <span>{copied ? 'Copied to Clipboard!' : 'Copy SVG Code'}</span>
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition-all active:scale-95 border border-white/10"
+            >
+              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              <span>{copied ? 'Copied to Clipboard!' : 'Copy SVG'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadProject}
+              title="Save as dedicated .logo project file"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition-all active:scale-95 border border-white/10"
+            >
+              <FileCode className="w-4 h-4 text-amber-400" />
+              <span>Save Project (.logo)</span>
+            </button>
+          </div>
 
           <div className="flex items-center gap-2">
             <button
@@ -287,7 +329,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition-all active:scale-95 border border-white/10"
             >
               <Image className="w-4 h-4 text-cyan-400" />
-              <span>Download PNG (2x)</span>
+              <span>PNG (2x)</span>
             </button>
             <button
               type="button"
@@ -298,6 +340,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               <span>Download SVG</span>
             </button>
           </div>
+        </div>
+
+        {/* Re-import note */}
+        <div className="text-[11px] text-zinc-400 text-center pt-1 border-t border-white/5">
+          <span className="text-zinc-300 font-medium">Re-import anytime:</span> Exported SVGs contain embedded project data. Drag & drop your SVG file back into LogoBuilder to continue editing with full history and guides!
         </div>
       </div>
     </div>

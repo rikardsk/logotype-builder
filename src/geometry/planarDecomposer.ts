@@ -102,6 +102,59 @@ function getLineSegments(guide: GuideShape): { p1: Point2D; p2: Point2D }[] {
   return [];
 }
 
+function isSegmentCrossingFace(
+  face: PathItem,
+  p1: Point2D,
+  p2: Point2D,
+  scope: PaperScope
+): boolean {
+  const minX = Math.min(p1.x, p2.x);
+  const maxX = Math.max(p1.x, p2.x);
+  const minY = Math.min(p1.y, p2.y);
+  const maxY = Math.max(p1.y, p2.y);
+  const segBounds = new scope.Rectangle(
+    new scope.Point(minX - 0.5, minY - 0.5),
+    new scope.Point(maxX + 0.5, maxY + 0.5)
+  );
+  if (!face.bounds.intersects(segBounds)) {
+    return false;
+  }
+
+  const lineSeg = new scope.Path.Line(
+    new scope.Point(p1.x, p1.y),
+    new scope.Point(p2.x, p2.y)
+  );
+  const intersections = lineSeg.getIntersections(face);
+  lineSeg.remove();
+
+  return intersections.length >= 2;
+}
+
+function createFaceCutter(
+  p1: Point2D,
+  p2: Point2D,
+  ux: number,
+  uy: number,
+  scope: PaperScope
+): Path {
+  const nx = -uy;
+  const ny = ux;
+  const span = 2000;
+  const startX = p1.x - ux * span;
+  const startY = p1.y - uy * span;
+  const endX = p2.x + ux * span;
+  const endY = p2.y + uy * span;
+
+  const cutter = new scope.Path([
+    new scope.Point(startX, startY),
+    new scope.Point(endX, endY),
+    new scope.Point(endX + nx * span, endY + ny * span),
+    new scope.Point(startX + nx * span, startY + ny * span),
+  ]);
+  cutter.closePath();
+  return cutter;
+}
+
 function sliceFaceWithLine(
   face: PathItem,
   p1: Point2D,
@@ -114,24 +167,11 @@ function sliceFaceWithLine(
   const len = Math.hypot(dx, dy);
   if (len < 0.001) return [face];
 
-  const ux = dx / len;
-  const uy = dy / len;
-  const nx = -uy;
-  const ny = ux;
+  if (!isSegmentCrossingFace(face, p1, p2, scope)) {
+    return [face];
+  }
 
-  const startX = p1.x - ux * 5000;
-  const startY = p1.y - uy * 5000;
-  const endX = p2.x + ux * 5000;
-  const endY = p2.y + uy * 5000;
-
-  const cutter = new scope.Path([
-    new scope.Point(startX, startY),
-    new scope.Point(endX, endY),
-    new scope.Point(endX + nx * 5000, endY + ny * 5000),
-    new scope.Point(startX + nx * 5000, startY + ny * 5000),
-  ]);
-  cutter.closePath();
-
+  const cutter = createFaceCutter(p1, p2, dx / len, dy / len, scope);
   if (!face.bounds.intersects(cutter.bounds)) {
     cutter.remove();
     return [face];
@@ -195,23 +235,27 @@ export function decomposeGuidesToAtomicFaces(guides: GuideShape[]): AtomicFace[]
   scope.activate();
   scope.project.clear();
 
-  const lineCells = lineGuides.length >= 3 ? decomposeGuidesWithPlanarGraph(lineGuides) : [];
-  const allShapesData = [
-    ...closedGuides.map((g) => g.pathData).filter(Boolean),
-    ...lineCells.map((c) => c.pathData),
-  ];
-
-  let atomicPaths = decomposeClosedShapes(allShapesData, scope);
+  const closedShapesData = closedGuides.map((g) => g.pathData).filter(Boolean);
+  let closedAtomicPaths = decomposeClosedShapes(closedShapesData, scope);
 
   for (const guide of lineGuides) {
     for (const seg of getLineSegments(guide)) {
       const nextAtomic: PathItem[] = [];
-      for (const face of atomicPaths) {
+      for (const face of closedAtomicPaths) {
         nextAtomic.push(...sliceFaceWithLine(face, seg.p1, seg.p2, scope));
       }
-      atomicPaths = nextAtomic;
+      closedAtomicPaths = nextAtomic;
     }
   }
+
+  const totalLineSegments = lineGuides.flatMap(getLineSegments);
+  const lineCells = totalLineSegments.length >= 3 ? decomposeGuidesWithPlanarGraph(lineGuides) : [];
+  const allShapesData = [
+    ...closedAtomicPaths.map((p) => p.pathData).filter(Boolean),
+    ...lineCells.map((c) => c.pathData),
+  ];
+
+  const atomicPaths = decomposeClosedShapes(allShapesData, scope);
 
   return atomicPaths.map((p, index) => ({
     id: `face-${index}`,

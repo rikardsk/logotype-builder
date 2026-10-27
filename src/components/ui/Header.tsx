@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Sparkles,
   Download,
+  FolderOpen,
   HelpCircle,
   ZoomIn,
   ZoomOut,
@@ -10,7 +11,11 @@ import {
   AlignCenter,
   Crop,
 } from 'lucide-react';
-import { BackgroundImageConfig, ScaffoldConfig } from '../../geometry/types';
+import { BackgroundImageConfig, ScaffoldConfig, LogoProjectData } from '../../geometry/types';
+import {
+  parseProjectFile,
+  parseGenericSvgToShapes,
+} from '../../geometry/projectSerialization';
 import { ScaffoldSelector } from './ScaffoldSelector';
 import { ImageControls } from './ImageControls';
 import { BackgroundControl } from './BackgroundControl';
@@ -31,6 +36,7 @@ interface HeaderProps {
   onZoomChange: (zoom: number) => void;
   onResetZoom: () => void;
   onOpenExport: () => void;
+  onLoadProject?: (project: LogoProjectData) => void;
   canvasBackground: string;
   onSelectBackground: (color: string) => void;
   hasConstructedShapes?: boolean;
@@ -56,6 +62,7 @@ export const Header: React.FC<HeaderProps> = ({
   onZoomChange,
   onResetZoom,
   onOpenExport,
+  onLoadProject,
   canvasBackground,
   onSelectBackground,
   hasConstructedShapes = false,
@@ -65,6 +72,35 @@ export const Header: React.FC<HeaderProps> = ({
   onResetArtboard,
 }) => {
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const projectInputRef = useRef<HTMLInputElement>(null);
+
+  const handleProjectFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const project = parseProjectFile(text);
+      if (project) {
+        onLoadProject?.(project);
+        e.target.value = '';
+        return;
+      }
+      const generic = parseGenericSvgToShapes(text);
+      if (generic.shapes.length > 0) {
+        onLoadProject?.({
+          version: 1,
+          app: 'LogoBuilder',
+          artboard: generic.artboard || { x: 0, y: 0, width: 800, height: 800 },
+          canvasBackground: '#121316',
+          guides: [],
+          constructedShapes: generic.shapes,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load project file:', err);
+    }
+    e.target.value = '';
+  };
 
   return (
     <>
@@ -220,6 +256,24 @@ export const Header: React.FC<HeaderProps> = ({
             <HelpCircle className="w-4 h-4" />
           </button>
 
+          {/* Open / Import Project */}
+          <input
+            ref={projectInputRef}
+            type="file"
+            accept=".logo,.json,.svg"
+            className="hidden"
+            onChange={handleProjectFileSelect}
+          />
+          <button
+            type="button"
+            title="Open Project or Import SVG (.logo, .svg, .json)"
+            onClick={() => projectInputRef.current?.click()}
+            className="h-9 flex items-center gap-2 px-3 rounded-xl text-zinc-300 hover:text-white hover:bg-white/10 transition-all active:scale-95 border border-white/10 text-xs font-semibold"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Open</span>
+          </button>
+
           {/* Export Button */}
           <button
             type="button"
@@ -295,6 +349,18 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex justify-between items-center py-1 border-b border-white/5">
                 <span>Move Shape Layer Up / Down</span>
                 <kbd className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-white/10">Ctrl + [ / ]</kbd>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span>Cycle Through Guides</span>
+                <kbd className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-white/10">Tab / Shift+Tab</kbd>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span>Nudge Guide / Shape (Hold Shift for 10px)</span>
+                <kbd className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-white/10">Arrow Keys</kbd>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span>Resize / Lengthen Shape or Guide</span>
+                <kbd className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-white/10">Ctrl + Arrow Keys</kbd>
               </div>
               <div className="flex justify-between items-center py-1">
                 <span>Delete Selected Guide or Shape</span>

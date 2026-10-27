@@ -13,6 +13,7 @@ import {
   Square,
   Wand2,
   Type,
+  Focus,
 } from 'lucide-react';
 import { BuilderMode } from '../../geometry/types';
 
@@ -22,6 +23,7 @@ interface ToolbarProps {
   showGuides: boolean;
   onSetMode: (mode: BuilderMode) => void;
   onToggleGuides: () => void;
+  onCycleGuide?: () => void;
   onClear: () => void;
   onClearGuides: () => void;
 }
@@ -32,6 +34,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   showGuides,
   onSetMode,
   onToggleGuides,
+  onCycleGuide,
   onClear,
   onClearGuides,
 }) => {
@@ -220,6 +223,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       >
         {showGuides ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
       </button>
+
+      {/* Cycle Through Guides (Tab) */}
+      {onCycleGuide && (
+        <button
+          type="button"
+          title="Cycle Through Guides (Tab)"
+          onClick={onCycleGuide}
+          className="p-2.5 rounded-xl text-zinc-400 hover:text-cyan-400 hover:bg-cyan-950/30 transition-all active:scale-95"
+        >
+          <Focus className="w-5 h-5" />
+        </button>
+      )}
 
       <div className="w-6 h-[1px] bg-white/10 my-0.5" />
 

@@ -69,4 +69,35 @@ describe('boxSelect', () => {
     expect(isShapeInBox(t1, marquee)).toBe(true);
     expect(isShapeInBox(t2, marquee)).toBe(false);
   });
+
+  it('excludes hidden shapes (visible === false) from marquee selection', () => {
+    const t1: ConstructedShape = {
+      id: 'text-visible',
+      pathData: '',
+      fillColor: '#ffffff',
+      createdAt: 100,
+      type: 'text',
+      text: 'VISIBLE',
+      fontSize: 48,
+      x: 100,
+      y: 100,
+      visible: true,
+    };
+    const t2: ConstructedShape = {
+      id: 'text-hidden',
+      pathData: '',
+      fillColor: '#ffffff',
+      createdAt: 101,
+      type: 'text',
+      text: 'HIDDEN',
+      fontSize: 48,
+      x: 120,
+      y: 100,
+      visible: false,
+    };
+    const marquee = { x: 80, y: 40, width: 300, height: 100 };
+
+    const result = findItemsInBox([], [t1, t2], marquee);
+    expect(result.shapeIds).toEqual(['text-visible']);
+  });
 });

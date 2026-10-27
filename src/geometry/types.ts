@@ -37,6 +37,7 @@ export interface ConstructedShape {
   x?: number;
   y?: number;
   letterSpacing?: number;
+  visible?: boolean;
 }
 
 export interface GuideShape {
@@ -86,4 +87,16 @@ export interface ScaffoldConfig {
   description: string;
   iconName: string;
   guides: GuideShape[];
+}
+
+export interface LogoProjectData {
+  version: number;
+  app: 'LogoBuilder';
+  createdAt?: number;
+  artboard: ArtboardConfig;
+  canvasBackground: string;
+  guides: GuideShape[];
+  constructedShapes: ConstructedShape[];
+  currentScaffold?: ScaffoldConfig | null;
+  backgroundImage?: BackgroundImageConfig | null;
 }

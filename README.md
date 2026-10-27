@@ -121,10 +121,11 @@ Figma lacks a native shape builder, while legacy vector suites can be heavy and 
    - Pick a brand color from the bottom palette bar.
    - Press <kbd>V</kbd> to switch to **Select Mode** to scale, move, or reorder shapes.
    - Click **Center Logo** or **Crop Canvas** to frame your mark.
-5. **Export**:
+5. **Export & Re-import (Full Project Continuity)**:
    - Click **Export Mark** in the top-right corner.
    - Choose **Clean SVG** for production or **Blueprint** for portfolio presentation.
-   - Copy SVG directly to clipboard or download as SVG / 2× PNG.
+   - Download as SVG or 2× PNG, or save as a dedicated **.logo** project file.
+   - **Continue Working Anytime**: Exported SVGs automatically contain embedded project data. Drag & drop any exported SVG (or `.logo` file) directly onto the canvas, or click **Open** in the top bar to restore all guides, shapes, colors, and artboard configurations!
 
 ---
 
@@ -143,8 +144,13 @@ Figma lacks a native shape builder, while legacy vector suites can be heavy and 
 | <kbd>R</kbd> | Draw Rectangle / Quad Guide |
 | <kbd>T</kbd> | Wordmark / Text Tool |
 | <kbd>H</kbd> | Toggle Guide Visibility |
+| <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> | Cycle Forward / Backward Through Guides |
 | <kbd>Space</kbd> + Drag | Pan Canvas |
 | <kbd>[</kbd> / <kbd>]</kbd> | Scale Selected Shapes Down / Up (10%) |
+| <kbd>Arrow Keys</kbd> | Nudge Selected Shape / Guide by 1px |
+| <kbd>Shift</kbd> + <kbd>Arrow Keys</kbd> | Fast Nudge Selected Shape / Guide by 10px |
+| <kbd>Ctrl</kbd> + <kbd>Arrow Keys</kbd> | Resize Shape or Resize / Lengthen / Shorten Guide (5%) |
+| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Arrow Keys</kbd> | Fast Resize Shape or Guide (15%) |
 | <kbd>Ctrl</kbd> + <kbd>[</kbd> / <kbd>]</kbd> | Move Layer Backward / Forward |
 | <kbd>Ctrl</kbd> + <kbd>C</kbd> / <kbd>V</kbd> | Copy / Paste Selected Elements |
 | <kbd>Ctrl</kbd> + <kbd>D</kbd> | Duplicate Selection (with 20px offset) |

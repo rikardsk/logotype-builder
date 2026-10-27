@@ -9,7 +9,12 @@ import {
   ConstructedShape,
   GuideShape,
   Point2D,
+  LogoProjectData,
 } from '../../geometry/types';
+import {
+  parseProjectFile,
+  parseGenericSvgToShapes,
+} from '../../geometry/projectSerialization';
 import {
   createCircleGuide,
   createEllipseGuide,
@@ -70,6 +75,7 @@ interface CanvasProps {
   onSelectShapeIds: (ids: string[]) => void;
   onDeleteSelected: () => void;
   onSetBackgroundImage: (url: string, width?: number, height?: number) => void;
+  onLoadProject?: (project: LogoProjectData) => void;
 }
 
 function loadAndFitImage(
@@ -115,6 +121,7 @@ export const ShapeBuilderCanvas: React.FC<CanvasProps> = ({
   onSelectShapeIds,
   onDeleteSelected,
   onSetBackgroundImage,
+  onLoadProject,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const contentGroupRef = useRef<SVGGElement | null>(null);
@@ -192,7 +199,10 @@ export const ShapeBuilderCanvas: React.FC<CanvasProps> = ({
       : null;
 
   const selectedShapes = useMemo(
-    () => activeShapes.filter((s) => selectedShapeIds.includes(s.id)),
+    () =>
+      activeShapes.filter(
+        (s) => s.visible !== false && selectedShapeIds.includes(s.id)
+      ),
     [activeShapes, selectedShapeIds]
   );
 
@@ -615,7 +625,7 @@ export const ShapeBuilderCanvas: React.FC<CanvasProps> = ({
     e.dataTransfer.dropEffect = 'copy';
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     dragCounter.current = 0;
@@ -623,7 +633,37 @@ export const ShapeBuilderCanvas: React.FC<CanvasProps> = ({
 
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      const isImg = file.type.startsWith('image/') || /\.(png|jpe?g|svg|webp|gif)$/i.test(file.name);
+      const isProjectOrSvg =
+        /\.(logo|json|svg)$/i.test(file.name) ||
+        file.type === 'image/svg+xml' ||
+        file.type === 'application/json';
+
+      if (isProjectOrSvg) {
+        try {
+          const text = await file.text();
+          const project = parseProjectFile(text);
+          if (project) {
+            onLoadProject?.(project);
+            return;
+          }
+          const generic = parseGenericSvgToShapes(text);
+          if (generic.shapes.length > 0) {
+            onLoadProject?.({
+              version: 1,
+              app: 'LogoBuilder',
+              artboard: generic.artboard || { x: 0, y: 0, width: 800, height: 800 },
+              canvasBackground: '#121316',
+              guides: [],
+              constructedShapes: generic.shapes,
+            });
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to parse dropped project/SVG:', err);
+        }
+      }
+
+      const isImg = file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|svg)$/i.test(file.name);
       if (!isImg) return;
       const reader = new FileReader();
       reader.onload = (ev) => {
@@ -715,6 +755,7 @@ export const ShapeBuilderCanvas: React.FC<CanvasProps> = ({
           {/* Built Logotype Shapes */}
           <g id="layer-constructed-shapes">
             {activeShapes.map((shape) => {
+              if (shape.visible === false) return null;
               const isSelected = selectedShapeIds.includes(shape.id);
               if (shape.type === 'text') {
                 const fs = shape.fontSize || 48;

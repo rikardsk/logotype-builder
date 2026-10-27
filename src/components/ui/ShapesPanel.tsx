@@ -9,6 +9,8 @@ import {
   Crop,
   ArrowUp,
   ArrowDown,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { ConstructedShape } from '../../geometry/types';
 
@@ -23,6 +25,7 @@ interface ShapesPanelProps {
   onResetArtboard?: () => void;
   isArtboardCropped?: boolean;
   onReorderShape?: (id: string, direction: 'up' | 'down') => void;
+  onToggleVisibility?: (id: string) => void;
 }
 
 export const ShapesPanel: React.FC<ShapesPanelProps> = ({
@@ -36,6 +39,7 @@ export const ShapesPanel: React.FC<ShapesPanelProps> = ({
   onResetArtboard,
   isArtboardCropped = false,
   onReorderShape,
+  onToggleVisibility,
 }) => {
   if (shapes.length === 0) return null;
 
@@ -115,6 +119,7 @@ export const ShapesPanel: React.FC<ShapesPanelProps> = ({
           const isSelected = selectedShapeIds.includes(shape.id);
           const isTop = originalIndex === shapes.length - 1;
           const isBottom = originalIndex === 0;
+          const isHidden = shape.visible === false;
 
           return (
             <div
@@ -124,31 +129,60 @@ export const ShapesPanel: React.FC<ShapesPanelProps> = ({
                 isSelected
                   ? 'bg-indigo-950/60 border border-indigo-500/40 text-white shadow-sm'
                   : 'bg-zinc-900/80 border border-white/5 text-zinc-300 hover:border-white/15'
-              }`}
+              } ${isHidden ? 'opacity-40 hover:opacity-75' : ''}`}
             >
               <div className="flex items-center gap-2 overflow-hidden min-w-0 mr-1">
                 <div
-                  className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm shrink-0"
+                  className={`w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm shrink-0 ${
+                    isHidden ? 'opacity-40' : ''
+                  }`}
                   style={{ backgroundColor: shape.fillColor }}
                 />
                 {shape.type === 'text' ? (
                   <div className="flex items-center gap-1 min-w-0">
                     <Type className="w-3 h-3 text-cyan-400 shrink-0" />
                     <span
-                      className="text-[11px] text-zinc-300 truncate max-w-[100px]"
+                      className={`text-[11px] truncate max-w-[100px] ${
+                        isHidden ? 'line-through text-zinc-500' : 'text-zinc-300'
+                      }`}
                       title={shape.text}
                     >
                       {shape.text || 'Text'}
                     </span>
                   </div>
                 ) : (
-                  <span className="font-mono text-[11px] text-zinc-400 truncate">
+                  <span
+                    className={`font-mono text-[11px] truncate ${
+                      isHidden ? 'line-through text-zinc-500' : 'text-zinc-400'
+                    }`}
+                  >
                     Shape #{originalIndex + 1}
                   </span>
                 )}
               </div>
 
               <div className="flex items-center gap-0.5 shrink-0">
+                {/* Visibility Toggle Button */}
+                <button
+                  type="button"
+                  title={isHidden ? 'Show Shape' : 'Hide Shape'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleVisibility?.(shape.id);
+                  }}
+                  className={`p-1 rounded-lg transition-all active:scale-90 ${
+                    isHidden
+                      ? 'text-zinc-500 hover:text-white hover:bg-white/10'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {isHidden ? (
+                    <EyeOff className="w-3.5 h-3.5 text-zinc-500" />
+                  ) : (
+                    <Eye className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white" />
+                  )}
+                </button>
+
                 <button
                   type="button"
                   disabled={isTop}

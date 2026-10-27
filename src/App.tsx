@@ -87,6 +87,39 @@ export const App: React.FC = () => {
         return;
       }
 
+      if (e.key === 'Tab' && store.guides.length > 0) {
+        e.preventDefault();
+        store.cycleGuide(e.shiftKey ? 'prev' : 'next');
+        return;
+      }
+
+      if (
+        e.key === 'ArrowUp' ||
+        e.key === 'ArrowDown' ||
+        e.key === 'ArrowLeft' ||
+        e.key === 'ArrowRight'
+      ) {
+        const hasSelection =
+          store.selectedGuideIds.length > 0 || store.selectedShapeIds.length > 0;
+        if (hasSelection) {
+          e.preventDefault();
+          if (isCmdOrCtrl) {
+            const isGrow = e.key === 'ArrowUp' || e.key === 'ArrowRight';
+            const factor = isGrow
+              ? e.shiftKey ? 1.15 : 1.05
+              : e.shiftKey ? 0.85 : 0.95;
+            store.resizeSelected(factor, e.repeat);
+            return;
+          }
+
+          const step = e.shiftKey ? 10 : 1;
+          const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+          const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+          store.nudgeSelected(dx, dy, e.repeat);
+          return;
+        }
+      }
+
       if (e.key === '[') {
         store.scaleShapes(0.9);
       }
@@ -152,6 +185,7 @@ export const App: React.FC = () => {
           store.setPan({ x: 0, y: 0 });
         }}
         onOpenExport={() => setIsExportOpen(true)}
+        onLoadProject={store.loadProject}
         canvasBackground={store.canvasBackground}
         onSelectBackground={store.setCanvasBackground}
         hasConstructedShapes={store.constructedShapes.length > 0}
@@ -168,6 +202,7 @@ export const App: React.FC = () => {
           showGuides={store.showGuides}
           onSetMode={handleSetMode}
           onToggleGuides={() => store.setShowGuides(!store.showGuides)}
+          onCycleGuide={store.cycleGuide}
           onClear={store.clearShapes}
           onClearGuides={store.clearAllGuides}
         />
@@ -201,6 +236,7 @@ export const App: React.FC = () => {
           onResetArtboard={store.resetArtboard}
           isArtboardCropped={store.isArtboardCropped}
           onReorderShape={store.reorderShape}
+          onToggleVisibility={store.toggleShapeVisibility}
         />
 
         <ShapeBuilderCanvas
@@ -230,6 +266,7 @@ export const App: React.FC = () => {
           onSelectShapeIds={store.setSelectedShapeIds}
           onDeleteSelected={store.deleteSelected}
           onSetBackgroundImage={store.setBackgroundImage}
+          onLoadProject={store.loadProject}
         />
       </div>
 
@@ -240,6 +277,7 @@ export const App: React.FC = () => {
         guides={store.guides}
         canvasBackground={store.canvasBackground}
         artboard={store.artboard}
+        projectData={store.getProjectData()}
       />
     </div>
   );

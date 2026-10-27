@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   createLineGuide,
+  createCircleGuide,
   createEllipseGuide,
   createQuadGuide,
   createParallelGuide,
@@ -29,6 +30,7 @@ import {
   calculateCornerScale,
   reorderShapes,
   getCanvasViewBox,
+  resizeGuide,
 } from '../guideTransforms';
 
 describe('guideTransforms', () => {
@@ -463,6 +465,95 @@ describe('guideTransforms', () => {
       // cx = 350, cy = 325, viewSize = 1000
       // vx = 350 - 500 = -150, vy = 325 - 500 = -175
       expect(viewBox).toBe('-150 -175 1000 1000');
+    });
+  });
+
+  describe('nudge / arrow key movement', () => {
+    it('nudges circle and line guides by 1px and 10px', () => {
+      const circle = createCircleGuide('c1', 100, 100, 50);
+      const movedBy1 = moveGuide(circle, 1, 0);
+      expect(movedBy1.cx).toBe(101);
+      expect(movedBy1.cy).toBe(100);
+
+      const movedBy10 = moveGuide(circle, 0, -10);
+      expect(movedBy10.cx).toBe(100);
+      expect(movedBy10.cy).toBe(90);
+
+      const line = createLineGuide('l1', 10, 20, 30, 40);
+      const movedLine = moveGuide(line, -1, 10);
+      expect(movedLine.p1).toEqual({ x: 9, y: 30 });
+      expect(movedLine.p2).toEqual({ x: 29, y: 50 });
+    });
+
+    it('nudges text and path constructed shapes by delta', () => {
+      const textShape = {
+        id: 't1',
+        pathData: '',
+        fillColor: '#fff',
+        createdAt: 1,
+        type: 'text' as const,
+        x: 50,
+        y: 80,
+      };
+      const movedText = moveConstructedShape(textShape, 10, -10);
+      expect(movedText.x).toBe(60);
+      expect(movedText.y).toBe(70);
+    });
+  });
+
+  describe('resizeGuide (lengthen, shorten, scale)', () => {
+    it('lengthens and shortens a line guide symmetrically around its midpoint', () => {
+      // Horizontal line from (0, 50) to (100, 50), midpoint (50, 50), length 100
+      const line = createLineGuide('l1', 0, 50, 100, 50);
+
+      // Lengthen by factor 1.2 -> new length 120 (from -10 to 110)
+      const lengthened = resizeGuide(line, 1.2);
+      expect(lengthened.p1?.x).toBeCloseTo(-10, 4);
+      expect(lengthened.p1?.y).toBeCloseTo(50, 4);
+      expect(lengthened.p2?.x).toBeCloseTo(110, 4);
+      expect(lengthened.p2?.y).toBeCloseTo(50, 4);
+
+      // Shorten by factor 0.8 -> new length 80 (from 10 to 90)
+      const shortened = resizeGuide(line, 0.8);
+      expect(shortened.p1?.x).toBeCloseTo(10, 4);
+      expect(shortened.p1?.y).toBeCloseTo(50, 4);
+      expect(shortened.p2?.x).toBeCloseTo(90, 4);
+      expect(shortened.p2?.y).toBeCloseTo(50, 4);
+    });
+
+    it('scales circle and parallel circle guides', () => {
+      const circle = createCircleGuide('c1', 100, 100, 50);
+      const scaledCircle = resizeGuide(circle, 1.1);
+      expect(scaledCircle.rx).toBeCloseTo(55, 4);
+      expect(scaledCircle.cx).toBe(100);
+      expect(scaledCircle.cy).toBe(100);
+
+      const parallelCircle = createParallelCircleGuide('pc1', 100, 100, 50, 20);
+      const scaledParallelCircle = resizeGuide(parallelCircle, 0.9);
+      expect(scaledParallelCircle.rx).toBeCloseTo(45, 4);
+    });
+
+    it('scales ellipse guides symmetrically', () => {
+      const ellipse = createEllipseGuide('e1', 200, 200, 100, 50);
+      const scaled = resizeGuide(ellipse, 1.2);
+      expect(scaled.rx).toBeCloseTo(120, 4);
+      expect(scaled.ry).toBeCloseTo(60, 4);
+      expect(scaled.cx).toBe(200);
+      expect(scaled.cy).toBe(200);
+    });
+
+    it('scales quad/rectangle guides symmetrically around centroid', () => {
+      const quad = createQuadGuide('q1', [
+        { x: 0, y: 0 },
+        { x: 100, y: 0 },
+        { x: 100, y: 100 },
+        { x: 0, y: 100 },
+      ]); // centroid (50, 50)
+      const scaled = resizeGuide(quad, 1.5);
+      expect(scaled.points?.[0]).toEqual({ x: -25, y: -25 });
+      expect(scaled.points?.[1]).toEqual({ x: 125, y: -25 });
+      expect(scaled.points?.[2]).toEqual({ x: 125, y: 125 });
+      expect(scaled.points?.[3]).toEqual({ x: -25, y: 125 });
     });
   });
 });

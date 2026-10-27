@@ -8,7 +8,9 @@ import {
   GuideShape,
   Point2D,
   ScaffoldConfig,
+  LogoProjectData,
 } from '../geometry/types';
+import { createProjectData } from '../geometry/projectSerialization';
 import { SCAFFOLD_PRESETS } from '../geometry/scaffolds';
 import { decomposeGuidesToAtomicFaces } from '../geometry/planarDecomposer';
 import { mergeFacePaths, subtractFaceFromShape } from '../geometry/shapeMerger';
@@ -18,6 +20,7 @@ import {
   scaleConstructedShapes,
   getShapesBoundingBox,
   reorderShapes,
+  resizeGuide,
 } from '../geometry/guideTransforms';
 
 export const COLOR_PALETTES = [
@@ -201,7 +204,7 @@ export function useBuilderStore() {
       const targetIds =
         selectedShapeIds.length > 0
           ? selectedShapeIds
-          : constructedShapes.map((s) => s.id);
+          : constructedShapes.filter((s) => s.visible !== false).map((s) => s.id);
       if (targetIds.length === 0) return;
 
       const targetShapes = constructedShapes.filter((s) => targetIds.includes(s.id));
@@ -220,8 +223,8 @@ export function useBuilderStore() {
     const targetIds =
       selectedShapeIds.length > 0
         ? selectedShapeIds
-        : constructedShapes.map((s) => s.id);
-    const targetShapes = constructedShapes.filter((s) => targetIds.includes(s.id));
+        : constructedShapes.filter((s) => s.visible !== false).map((s) => s.id);
+    const targetShapes = constructedShapes.filter((s) => targetIds.includes(s.id) && s.visible !== false);
     const bbox = getShapesBoundingBox(targetShapes);
     if (!bbox) return;
 
@@ -245,7 +248,8 @@ export function useBuilderStore() {
 
   const cropCanvasToLogo = useCallback(() => {
     if (constructedShapes.length === 0) return;
-    const bbox = getShapesBoundingBox(constructedShapes);
+    const visibleShapes = constructedShapes.filter((s) => s.visible !== false);
+    const bbox = getShapesBoundingBox(visibleShapes);
     if (!bbox) return;
 
     const padding = 50;
@@ -328,6 +332,91 @@ export function useBuilderStore() {
       setConstructedShapes(next);
     },
     [constructedShapes, pushHistory]
+  );
+
+  const toggleShapeVisibility = useCallback(
+    (id: string) => {
+      pushHistory();
+      setConstructedShapes((prev) =>
+        prev.map((s) =>
+          s.id === id ? { ...s, visible: s.visible === false ? true : false } : s
+        )
+      );
+    },
+    [pushHistory]
+  );
+
+  const nudgeSelected = useCallback(
+    (dx: number, dy: number, isRepeat = false) => {
+      const hasGuides = selectedGuideIds.length > 0;
+      const hasShapes = selectedShapeIds.length > 0;
+      if (!hasGuides && !hasShapes) return;
+
+      if (!isRepeat) {
+        pushHistory();
+      }
+
+      if (hasGuides) {
+        setGuides((prev) =>
+          prev.map((g) => (selectedGuideIds.includes(g.id) ? moveGuide(g, dx, dy) : g))
+        );
+      }
+
+      if (hasShapes) {
+        setConstructedShapes((prev) =>
+          prev.map((s) => (selectedShapeIds.includes(s.id) ? moveConstructedShape(s, dx, dy) : s))
+        );
+      }
+    },
+    [selectedGuideIds, selectedShapeIds, pushHistory]
+  );
+
+  const resizeSelected = useCallback(
+    (factor: number, isRepeat = false) => {
+      const hasGuides = selectedGuideIds.length > 0;
+      const hasShapes = selectedShapeIds.length > 0;
+      if (!hasGuides && !hasShapes) return;
+
+      if (!isRepeat) {
+        pushHistory();
+      }
+
+      if (hasGuides) {
+        setGuides((prev) =>
+          prev.map((g) => (selectedGuideIds.includes(g.id) ? resizeGuide(g, factor) : g))
+        );
+      }
+
+      if (hasShapes) {
+        const targetShapes = constructedShapes.filter(
+          (s) => selectedShapeIds.includes(s.id) && s.visible !== false
+        );
+        const scaled = scaleConstructedShapes(targetShapes, factor);
+        const map = new Map(scaled.map((s) => [s.id, s]));
+        setConstructedShapes((prev) => prev.map((s) => map.get(s.id) || s));
+      }
+    },
+    [selectedGuideIds, selectedShapeIds, constructedShapes, pushHistory]
+  );
+
+  const cycleGuide = useCallback(
+    (direction: 'next' | 'prev' = 'next') => {
+      if (guides.length === 0) return;
+      setShowGuides(true);
+      setMode('select');
+      const currentIndex = guides.findIndex((g) => selectedGuideIds.includes(g.id));
+      let nextIndex = 0;
+      if (currentIndex !== -1) {
+        if (direction === 'next') {
+          nextIndex = (currentIndex + 1) % guides.length;
+        } else {
+          nextIndex = (currentIndex - 1 + guides.length) % guides.length;
+        }
+      }
+      setSelectedGuideIds([guides[nextIndex].id]);
+      setSelectedShapeIds([]);
+    },
+    [guides, selectedGuideIds]
   );
 
   const clearAllGuides = useCallback(() => {
@@ -432,6 +521,46 @@ export function useBuilderStore() {
     setSelectedShapeIds([]);
   }, [constructedShapes, pushHistory]);
 
+  const loadProject = useCallback(
+    (project: LogoProjectData) => {
+      pushHistory();
+      if (Array.isArray(project.guides)) {
+        setGuides(project.guides);
+      }
+      if (Array.isArray(project.constructedShapes)) {
+        setConstructedShapes(project.constructedShapes);
+      }
+      if (project.artboard) {
+        setArtboard(project.artboard);
+      }
+      if (project.canvasBackground) {
+        setCanvasBackground(project.canvasBackground);
+      }
+      if (project.currentScaffold) {
+        setCurrentScaffold(project.currentScaffold);
+      }
+      if (project.backgroundImage !== undefined) {
+        setBackgroundImageState(project.backgroundImage);
+      }
+      setSelectedGuideIds([]);
+      setSelectedShapeIds([]);
+      setShowGuides(true);
+      setMode('select');
+    },
+    [pushHistory]
+  );
+
+  const getProjectData = useCallback((): LogoProjectData => {
+    return createProjectData({
+      guides,
+      constructedShapes,
+      artboard,
+      canvasBackground,
+      currentScaffold,
+      backgroundImage,
+    });
+  }, [guides, constructedShapes, artboard, canvasBackground, currentScaffold, backgroundImage]);
+
   return {
     currentScaffold,
     guides,
@@ -480,6 +609,10 @@ export function useBuilderStore() {
     removeGuideById,
     removeShapeById,
     reorderShape,
+    toggleShapeVisibility,
+    nudgeSelected,
+    resizeSelected,
+    cycleGuide,
     clearAllGuides,
     clearShapes,
     copySelection,
@@ -512,5 +645,7 @@ export function useBuilderStore() {
     subtractFaceIds,
     undo,
     redo,
+    loadProject,
+    getProjectData,
   };
 }
