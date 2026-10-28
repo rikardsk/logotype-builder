@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { X, Copy, Check, Download, Image, FileCode } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { ArtboardConfig, ConstructedShape, GuideShape, LogoProjectData } from '../../geometry/types';
 import {
   embedProjectInSvg,
@@ -109,7 +108,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const handleCopy = async () => {
     await navigator.clipboard.writeText(currentSvg);
     setCopied(true);
-    confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 } });
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -121,13 +119,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     a.download = `logotype-${activeTab}-${Date.now()}.svg`;
     a.click();
     URL.revokeObjectURL(url);
-    confetti({ particleCount: 50, spread: 70, origin: { y: 0.8 } });
     setTimeout(onClose, 400);
   };
 
   const handleDownloadProject = () => {
     downloadProjectFile(currentProject);
-    confetti({ particleCount: 50, spread: 70, origin: { y: 0.8 } });
     setTimeout(onClose, 400);
   };
 
@@ -166,7 +162,6 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       a.href = pngUrl;
       a.download = `logotype-${activeTab}-${Date.now()}.png`;
       a.click();
-      confetti({ particleCount: 50, spread: 70, origin: { y: 0.8 } });
       setTimeout(onClose, 400);
     };
     img.src = url;
