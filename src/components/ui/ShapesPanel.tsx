@@ -11,6 +11,7 @@ import {
   ArrowDown,
   Eye,
   EyeOff,
+  Combine,
 } from 'lucide-react';
 import { ConstructedShape } from '../../geometry/types';
 
@@ -26,6 +27,9 @@ interface ShapesPanelProps {
   isArtboardCropped?: boolean;
   onReorderShape?: (id: string, direction: 'up' | 'down') => void;
   onToggleVisibility?: (id: string) => void;
+  onUniteShapes?: () => void;
+  showShapeOutlines?: boolean;
+  onToggleOutlines?: () => void;
 }
 
 export const ShapesPanel: React.FC<ShapesPanelProps> = ({
@@ -40,6 +44,9 @@ export const ShapesPanel: React.FC<ShapesPanelProps> = ({
   isArtboardCropped = false,
   onReorderShape,
   onToggleVisibility,
+  onUniteShapes,
+  showShapeOutlines = true,
+  onToggleOutlines,
 }) => {
   if (shapes.length === 0) return null;
 
@@ -59,7 +66,38 @@ export const ShapesPanel: React.FC<ShapesPanelProps> = ({
           <Layers className="w-3.5 h-3.5 text-indigo-400" />
           <span>Built Shapes ({shapes.length})</span>
         </span>
+        {onToggleOutlines && (
+          <button
+            type="button"
+            onClick={onToggleOutlines}
+            title={showShapeOutlines ? 'Hide black outlines from shapes' : 'Show black outlines on shapes'}
+            className={`px-2 py-0.5 rounded-lg text-[11px] font-medium transition-all active:scale-95 border ${
+              showShapeOutlines
+                ? 'bg-zinc-800 text-zinc-300 hover:text-white border-white/10'
+                : 'bg-indigo-950/60 text-indigo-300 border-indigo-500/30'
+            }`}
+          >
+            {showShapeOutlines ? 'Outlines: ON' : 'Outlines: OFF'}
+          </button>
+        )}
       </div>
+
+      {/* Unite / Merge Continuous Shape Action */}
+      {shapes.length > 1 && onUniteShapes && (
+        <button
+          type="button"
+          onClick={onUniteShapes}
+          title="Unite shapes into 1 continuous shape (dissolves internal seams & black outlines) [Hotkey: Ctrl+U]"
+          className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 transition-all active:scale-95"
+        >
+          <Combine className="w-4 h-4" />
+          <span>
+            {selectedShapeIds.length > 1
+              ? `Unite Selected (${selectedShapeIds.length})`
+              : 'Unite All Shapes'}
+          </span>
+        </button>
+      )}
 
       {/* Quick Scale Control */}
       <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs">

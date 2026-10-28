@@ -70,6 +70,7 @@ export function useBuilderStore() {
   const [isAltHeld, setIsAltHeld] = useState(false);
   const [selectedColor, setSelectedColorState] = useState(COLOR_PALETTES[0]);
   const [showGuides, setShowGuides] = useState(true);
+  const [showShapeOutlines, setShowShapeOutlines] = useState(true);
   const [pan, setPan] = useState<Point2D>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [canvasBackground, setCanvasBackground] = useState<string>('#121316');
@@ -521,6 +522,51 @@ export function useBuilderStore() {
     setSelectedShapeIds([]);
   }, [constructedShapes, pushHistory]);
 
+  const selectAllShapes = useCallback(() => {
+    if (constructedShapes.length === 0) return;
+    setSelectedShapeIds(constructedShapes.map((s) => s.id));
+    setSelectedGuideIds([]);
+  }, [constructedShapes]);
+
+  const uniteShapes = useCallback(
+    (shapeIdsToUnite?: string[]) => {
+      const ids =
+        shapeIdsToUnite && shapeIdsToUnite.length > 0
+          ? shapeIdsToUnite
+          : selectedShapeIds.length > 1
+          ? selectedShapeIds
+          : constructedShapes.map((s) => s.id);
+
+      const targets = constructedShapes.filter(
+        (s) => ids.includes(s.id) && s.type !== 'text'
+      );
+      if (targets.length <= 1) return;
+
+      const paths = targets.map((s) => s.pathData).filter(Boolean);
+      if (paths.length === 0) return;
+
+      const unitedPath = mergeFacePaths(paths);
+      if (!unitedPath) return;
+
+      const remaining = constructedShapes.filter(
+        (s) => !targets.some((t) => t.id === s.id)
+      );
+      const primaryFill = targets[0].fillColor || selectedColor || '#818cf8';
+
+      const newShape: ConstructedShape = {
+        id: `shape-${Date.now()}`,
+        pathData: unitedPath,
+        fillColor: primaryFill,
+        createdAt: Date.now(),
+      };
+
+      pushHistory();
+      setConstructedShapes([...remaining, newShape]);
+      setSelectedShapeIds([newShape.id]);
+    },
+    [constructedShapes, selectedShapeIds, selectedColor, pushHistory]
+  );
+
   const loadProject = useCallback(
     (project: LogoProjectData) => {
       pushHistory();
@@ -592,6 +638,9 @@ export function useBuilderStore() {
     setIsAltHeld,
     setSelectedColor,
     setShowGuides,
+    showShapeOutlines,
+    setShowShapeOutlines,
+    toggleShapeOutlines: useCallback(() => setShowShapeOutlines((prev) => !prev), []),
     setPan,
     setZoom,
     setSelectedGuideIds,
@@ -643,6 +692,8 @@ export function useBuilderStore() {
     clearBackgroundImage: useCallback(() => setBackgroundImageState(null), []),
     mergeFaceIds,
     subtractFaceIds,
+    selectAllShapes,
+    uniteShapes,
     undo,
     redo,
     loadProject,

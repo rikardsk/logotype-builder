@@ -1,5 +1,46 @@
-import { getPaperScope, PathItem } from './paperScope';
+import { getPaperScope, PaperScope, PathItem, Path } from './paperScope';
 import { Point2D } from './types';
+
+function cleanMicroscopicHoles(item: PathItem, scope: PaperScope): PathItem {
+  if (item instanceof scope.Path) return item;
+  if (!(item instanceof scope.CompoundPath)) return item;
+
+  const valid = (item.children as Path[]).filter((c) => Math.abs(c.area) > 5);
+  if (valid.length === 0) return item;
+  if (valid.length === 1) {
+    const single = valid[0].clone({ insert: false });
+    item.remove();
+    return single;
+  }
+  const cp = new scope.CompoundPath({ insert: false });
+  for (const c of valid) {
+    cp.addChild(c.clone({ insert: false }));
+  }
+  item.remove();
+  return cp;
+}
+
+function greedyFuseItems(items: PathItem[]): PathItem {
+  let combined = items[0];
+  const pool = items.slice(1);
+
+  while (pool.length > 0) {
+    const expBounds = combined.bounds.expand(2);
+    const idx = pool.findIndex((it) => it.bounds.intersects(expBounds));
+    const nextIdx = idx >= 0 ? idx : 0;
+    const next = pool.splice(nextIdx, 1)[0];
+
+    const maxDim = Math.max(next.bounds.width, next.bounds.height, 10);
+    next.scale(1 + 0.6 / maxDim, next.bounds.center);
+
+    const united = combined.unite(next, { insert: false });
+    combined.remove();
+    next.remove();
+    combined = united;
+  }
+
+  return combined;
+}
 
 export function mergeFacePaths(paths: string[]): string {
   if (paths.length === 0) return '';
@@ -8,17 +49,21 @@ export function mergeFacePaths(paths: string[]): string {
   const scope = getPaperScope();
   scope.activate();
 
-  let combined: PathItem = new scope.CompoundPath(paths[0]);
-  for (let i = 1; i < paths.length; i++) {
-    const nextItem = new scope.CompoundPath(paths[i]);
-    const united = combined.unite(nextItem, { insert: false });
-    combined.remove();
-    nextItem.remove();
-    combined = united;
+  const items: PathItem[] = paths
+    .map((p) => new scope.CompoundPath(p))
+    .filter((it) => !it.isEmpty() && Math.abs(it.area) > 0.1);
+
+  if (items.length === 0) return '';
+  if (items.length === 1) {
+    const res = items[0].pathData || '';
+    items[0].remove();
+    return res;
   }
 
-  const result = combined.pathData || '';
-  combined.remove();
+  const fused = greedyFuseItems(items);
+  const cleaned = cleanMicroscopicHoles(fused, scope);
+  const result = cleaned.pathData || '';
+  cleaned.remove();
   return result;
 }
 

@@ -26,11 +26,12 @@ function escapeXml(unsafe: string): string {
     .replace(/'/g, '&apos;');
 }
 
-function renderCleanShape(s: ConstructedShape): string {
+function renderCleanShape(s: ConstructedShape, includeStroke = true): string {
   if (s.type === 'text') {
     return `  <text x="${s.x || 0}" y="${s.y || 0}" font-family="${s.fontFamily || 'Inter, sans-serif'}" font-size="${s.fontSize || 48}" font-weight="${s.fontWeight || '700'}" letter-spacing="${s.letterSpacing || 0}" fill="${s.fillColor}">${escapeXml(s.text || '')}</text>`;
   }
-  return `  <path d="${s.pathData}" fill="${s.fillColor}" fill-rule="evenodd" stroke="#18181b" stroke-width="1.5" />`;
+  const strokeAttr = includeStroke ? ' stroke="#18181b" stroke-width="1.5"' : '';
+  return `  <path d="${s.pathData}" fill="${s.fillColor}" fill-rule="evenodd"${strokeAttr} />`;
 }
 
 function renderBlueprintShape(s: ConstructedShape): string {
@@ -50,6 +51,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   projectData,
 }) => {
   const [activeTab, setActiveTab] = useState<'clean' | 'blueprint'>('clean');
+  const [includeStroke, setIncludeStroke] = useState(false);
   const [exportBg, setExportBg] = useState<'transparent' | 'canvas' | 'white' | 'black'>(
     canvasBackground === 'transparent' ? 'transparent' : 'canvas'
   );
@@ -80,10 +82,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         ? `  <rect x="${artboard.x}" y="${artboard.y}" width="${artboard.width}" height="${artboard.height}" fill="${effectiveBgColor}" />\n`
         : '';
     const visibleShapes = constructedShapes.filter((s) => s.visible !== false);
-    const paths = visibleShapes.map(renderCleanShape).join('\n');
+    const paths = visibleShapes.map((s) => renderCleanShape(s, includeStroke)).join('\n');
     const rawSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${artboard.x} ${artboard.y} ${artboard.width} ${artboard.height}" width="${artboard.width}" height="${artboard.height}">\n${bgRect}${paths}\n</svg>`;
     return embedProjectInSvg(rawSvg, currentProject);
-  }, [constructedShapes, effectiveBgColor, artboard, currentProject]);
+  }, [constructedShapes, effectiveBgColor, artboard, currentProject, includeStroke]);
 
   const blueprintSvgString = useMemo(() => {
     const bgFill = effectiveBgColor === 'transparent' ? 'none' : effectiveBgColor;
@@ -215,65 +217,84 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           </button>
         </div>
 
-        {/* Background Export Options */}
+        {/* Background & Outline Export Options */}
         <div className="flex items-center justify-between px-1 text-xs">
-          <span className="font-semibold text-zinc-400 text-[11px]">Export Background:</span>
-          <div className="flex items-center gap-1 p-1 bg-zinc-900 rounded-xl border border-white/5 text-[11px]">
-            <button
-              type="button"
-              onClick={() => setExportBg('transparent')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all ${
-                exportBg === 'transparent'
-                  ? 'bg-indigo-600 text-white font-medium shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <div
-                className="w-3 h-3 rounded-sm border border-white/20"
-                style={{
-                  backgroundImage:
-                    'repeating-conic-gradient(#71717a 0% 25%, #3f3f46 0% 50%)',
-                  backgroundSize: '4px 4px',
-                }}
-              />
-              <span>Transparent</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setExportBg('canvas')}
-              className={`px-2.5 py-1 rounded-lg transition-all ${
-                exportBg === 'canvas'
-                  ? 'bg-indigo-600 text-white font-medium shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              Match Artboard
-            </button>
-            <button
-              type="button"
-              onClick={() => setExportBg('white')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all ${
-                exportBg === 'white'
-                  ? 'bg-indigo-600 text-white font-medium shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <div className="w-3 h-3 rounded-sm bg-white border border-zinc-400" />
-              <span>White</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setExportBg('black')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all ${
-                exportBg === 'black'
-                  ? 'bg-indigo-600 text-white font-medium shadow-sm'
-                  : 'text-zinc-400 hover:text-white'
-              }`}
-            >
-              <div className="w-3 h-3 rounded-sm bg-black border border-white/20" />
-              <span>Black</span>
-            </button>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-zinc-400 text-[11px]">Background:</span>
+            <div className="flex items-center gap-1 p-1 bg-zinc-900 rounded-xl border border-white/5 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setExportBg('transparent')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all ${
+                  exportBg === 'transparent'
+                    ? 'bg-indigo-600 text-white font-medium shadow-sm'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <div
+                  className="w-3 h-3 rounded-sm border border-white/20"
+                  style={{
+                    backgroundImage:
+                      'repeating-conic-gradient(#71717a 0% 25%, #3f3f46 0% 50%)',
+                    backgroundSize: '4px 4px',
+                  }}
+                />
+                <span>Transparent</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setExportBg('canvas')}
+                className={`px-2.5 py-1 rounded-lg transition-all ${
+                  exportBg === 'canvas'
+                    ? 'bg-indigo-600 text-white font-medium shadow-sm'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                Artboard
+              </button>
+              <button
+                type="button"
+                onClick={() => setExportBg('white')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all ${
+                  exportBg === 'white'
+                    ? 'bg-indigo-600 text-white font-medium shadow-sm'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <div className="w-3 h-3 rounded-sm bg-white border border-zinc-400" />
+                <span>White</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setExportBg('black')}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg transition-all ${
+                  exportBg === 'black'
+                    ? 'bg-indigo-600 text-white font-medium shadow-sm'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <div className="w-3 h-3 rounded-sm bg-black border border-white/20" />
+                <span>Black</span>
+              </button>
+            </div>
           </div>
+
+          {activeTab === 'clean' && (
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-zinc-400 text-[11px]">Outlines:</span>
+              <button
+                type="button"
+                onClick={() => setIncludeStroke((prev) => !prev)}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-medium transition-all active:scale-95 border ${
+                  includeStroke
+                    ? 'bg-zinc-800 text-zinc-300 border-white/10'
+                    : 'bg-indigo-600 text-white border-indigo-500/30 shadow-sm'
+                }`}
+              >
+                {includeStroke ? 'Black (1.5px)' : 'None (Flat)'}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Live SVG Preview Box */}

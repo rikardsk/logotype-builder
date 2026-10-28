@@ -48,6 +48,22 @@ export const App: React.FC = () => {
         return;
       }
 
+      if (isCmdOrCtrl && e.key.toLowerCase() === 'u') {
+        e.preventDefault();
+        store.uniteShapes();
+        return;
+      }
+      if (isCmdOrCtrl && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        store.selectAllShapes();
+        return;
+      }
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        store.deleteSelected();
+        return;
+      }
+
       if (e.altKey) store.setIsAltHeld(true);
       if (e.key.toLowerCase() === 'v') store.setMode('select');
       if (e.key.toLowerCase() === 'm') store.setMode('merge');
@@ -205,6 +221,7 @@ export const App: React.FC = () => {
           onCycleGuide={store.cycleGuide}
           onClear={store.clearShapes}
           onClearGuides={store.clearAllGuides}
+          onUniteShapes={store.uniteShapes}
         />
 
         <TextToolbar
@@ -237,6 +254,9 @@ export const App: React.FC = () => {
           isArtboardCropped={store.isArtboardCropped}
           onReorderShape={store.reorderShape}
           onToggleVisibility={store.toggleShapeVisibility}
+          onUniteShapes={store.uniteShapes}
+          showShapeOutlines={store.showShapeOutlines}
+          onToggleOutlines={store.toggleShapeOutlines}
         />
 
         <ShapeBuilderCanvas
@@ -246,6 +266,7 @@ export const App: React.FC = () => {
           mode={store.mode}
           isAltHeld={store.isAltHeld}
           showGuides={store.showGuides}
+          showShapeOutlines={store.showShapeOutlines}
           pan={store.pan}
           zoom={store.zoom}
           selectedGuideIds={store.selectedGuideIds}

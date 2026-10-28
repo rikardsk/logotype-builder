@@ -44,4 +44,25 @@ describe('shapeMerger', () => {
     // Corner is still inside
     expect(isPointInPath(result, { x: 20, y: 20 })).toBe(true);
   });
+
+  it('unites multiple adjacent shapes into one continuous shape', () => {
+    // 5 contiguous adjacent 50x50 squares in a row from x=0 to x=250
+    const squares = Array.from({ length: 5 }, (_, i) =>
+      createPolygonGuide(`sq-${i}`, [
+        [i * 50, 0],
+        [(i + 1) * 50, 0],
+        [(i + 1) * 50, 50],
+        [i * 50, 50],
+      ])
+    );
+
+    const united = mergeFacePaths(squares.map((s) => s.pathData));
+    expect(united).toBeTruthy();
+    // Every sub-cell center must be inside the united shape
+    for (let i = 0; i < 5; i++) {
+      expect(isPointInPath(united, { x: i * 50 + 25, y: 25 })).toBe(true);
+    }
+    // Outside point must be false
+    expect(isPointInPath(united, { x: 300, y: 25 })).toBe(false);
+  });
 });

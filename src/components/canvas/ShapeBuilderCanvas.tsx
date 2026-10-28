@@ -55,6 +55,7 @@ interface CanvasProps {
   mode: BuilderMode;
   isAltHeld: boolean;
   showGuides: boolean;
+  showShapeOutlines?: boolean;
   pan: Point2D;
   zoom: number;
   selectedGuideIds: string[];
@@ -101,6 +102,7 @@ export const ShapeBuilderCanvas: React.FC<CanvasProps> = ({
   mode,
   isAltHeld,
   showGuides,
+  showShapeOutlines = true,
   pan,
   zoom,
   selectedGuideIds,
@@ -810,8 +812,8 @@ export const ShapeBuilderCanvas: React.FC<CanvasProps> = ({
                   d={shape.pathData}
                   fill={shape.fillColor}
                   fillRule="evenodd"
-                  stroke={isSelected ? '#f59e0b' : '#18181b'}
-                  strokeWidth={isSelected ? 3 : 1.5}
+                  stroke={isSelected ? '#f59e0b' : showShapeOutlines ? '#18181b' : 'none'}
+                  strokeWidth={isSelected ? 3 : showShapeOutlines ? 1.5 : 0}
                   strokeDasharray={isSelected ? '4 3' : 'none'}
                   filter="url(#shape-glow)"
                   className={mode === 'select' ? 'cursor-move hover:opacity-90' : ''}

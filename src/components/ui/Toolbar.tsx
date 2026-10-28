@@ -14,6 +14,7 @@ import {
   Wand2,
   Type,
   Focus,
+  Combine,
 } from 'lucide-react';
 import { BuilderMode } from '../../geometry/types';
 
@@ -26,6 +27,7 @@ interface ToolbarProps {
   onCycleGuide?: () => void;
   onClear: () => void;
   onClearGuides: () => void;
+  onUniteShapes?: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -37,6 +39,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onCycleGuide,
   onClear,
   onClearGuides,
+  onUniteShapes,
 }) => {
   const isShapeBuilder = mode === 'merge' || mode === 'subtract';
   const effectiveMode = isAltHeld ? 'subtract' : mode;
@@ -207,6 +210,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       >
         <MinusCircle className="w-5 h-5" />
       </button>
+
+      {/* Unite Shapes into 1 Continuous Shape (Ctrl+U) */}
+      {onUniteShapes && (
+        <button
+          type="button"
+          title="Unite All Shapes into 1 Continuous Shape (Ctrl+U) - Dissolves internal seams"
+          onClick={onUniteShapes}
+          className="p-2.5 rounded-xl text-zinc-400 hover:text-indigo-400 hover:bg-indigo-950/30 transition-all active:scale-95"
+        >
+          <Combine className="w-5 h-5" />
+        </button>
+      )}
 
       <div className="w-6 h-[1px] bg-white/10 my-0.5" />
 
