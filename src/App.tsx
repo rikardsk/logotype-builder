@@ -142,6 +142,9 @@ export const App: React.FC = () => {
       if (e.key === ']') {
         store.scaleShapes(1.1);
       }
+      if (e.key === '\\') {
+        store.resetScale();
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -248,6 +251,7 @@ export const App: React.FC = () => {
           onSelectShape={handleSelectShape}
           onRemoveShape={store.removeShapeById}
           onScaleShapes={store.scaleShapes}
+          onResetScale={store.resetScale}
           onCenterLogo={store.centerLogo}
           onCropCanvas={store.cropCanvasToLogo}
           onResetArtboard={store.resetArtboard}

@@ -5,6 +5,7 @@ import {
   Type,
   ZoomIn,
   ZoomOut,
+  RotateCcw,
   AlignCenter,
   Crop,
   ArrowUp,
@@ -21,6 +22,7 @@ interface ShapesPanelProps {
   onSelectShape: (id: string, isShift?: boolean) => void;
   onRemoveShape: (id: string) => void;
   onScaleShapes?: (factor: number) => void;
+  onResetScale?: () => void;
   onCenterLogo?: () => void;
   onCropCanvas?: () => void;
   onResetArtboard?: () => void;
@@ -38,6 +40,7 @@ export const ShapesPanel: React.FC<ShapesPanelProps> = ({
   onSelectShape,
   onRemoveShape,
   onScaleShapes,
+  onResetScale,
   onCenterLogo,
   onCropCanvas,
   onResetArtboard,
@@ -49,6 +52,24 @@ export const ShapesPanel: React.FC<ShapesPanelProps> = ({
   onToggleOutlines,
 }) => {
   if (shapes.length === 0) return null;
+
+  const targetShapes = useMemo(() => {
+    if (selectedShapeIds.length > 0) {
+      return shapes.filter((s) => selectedShapeIds.includes(s.id));
+    }
+    return shapes.filter((s) => s.visible !== false);
+  }, [shapes, selectedShapeIds]);
+
+  const isScaleModified = useMemo(() => {
+    return targetShapes.some((s) => Math.abs((s.scale ?? 1) - 1) > 0.001);
+  }, [targetShapes]);
+
+  const currentScalePercent = useMemo(() => {
+    if (targetShapes.length === 0) return 100;
+    const avgScale =
+      targetShapes.reduce((sum, s) => sum + (s.scale ?? 1), 0) / targetShapes.length;
+    return Math.round(avgScale * 100);
+  }, [targetShapes]);
 
   const layerItems = useMemo(() => {
     return shapes
@@ -101,10 +122,40 @@ export const ShapesPanel: React.FC<ShapesPanelProps> = ({
 
       {/* Quick Scale Control */}
       <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs">
-        <span className="text-[11px] font-medium text-zinc-400">
-          {selectedShapeIds.length > 0 ? 'Scale Selection' : 'Scale Logo'}
-        </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span
+            className="text-[11px] font-medium text-zinc-400 truncate"
+            title={selectedShapeIds.length > 0 ? 'Scale Selection' : 'Scale Logo'}
+          >
+            Scale
+          </span>
+          {isScaleModified && (
+            <span className="text-[10px] font-mono px-1 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              {currentScalePercent}%
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {onResetScale && (
+            <button
+              type="button"
+              disabled={!isScaleModified}
+              title={
+                isScaleModified
+                  ? 'Reset to original scale (100%) [Hotkey: \\]'
+                  : 'At original scale (100%)'
+              }
+              onClick={onResetScale}
+              className={`flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[11px] font-medium transition-all border ${
+                isScaleModified
+                  ? 'bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 hover:text-white border-indigo-500/30 active:scale-95 shadow-sm'
+                  : 'bg-zinc-800/40 text-zinc-600 border-white/5 cursor-not-allowed opacity-40'
+              }`}
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset</span>
+            </button>
+          )}
           <button
             type="button"
             title="Scale down 10% (Hotkey: [)"

@@ -33,11 +33,13 @@ export interface ConstructedShape {
   text?: string;
   fontFamily?: string;
   fontSize?: number;
+  originalFontSize?: number;
   fontWeight?: string | number;
   x?: number;
   y?: number;
   letterSpacing?: number;
   visible?: boolean;
+  scale?: number;
 }
 
 export interface GuideShape {

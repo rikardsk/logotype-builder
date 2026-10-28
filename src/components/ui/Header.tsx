@@ -347,6 +347,10 @@ export const Header: React.FC<HeaderProps> = ({
                 <kbd className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-white/10">[ / ]</kbd>
               </div>
               <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span>Reset Logo Scale</span>
+                <kbd className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-white/10">\</kbd>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
                 <span>Move Shape Layer Up / Down</span>
                 <kbd className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-white/10">Ctrl + [ / ]</kbd>
               </div>

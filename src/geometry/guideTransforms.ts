@@ -418,6 +418,7 @@ export function scaleConstructedShape(
   center: Point2D
 ): ConstructedShape {
   if (factor <= 0) return shape;
+  const newScale = (shape.scale ?? 1) * factor;
   if (shape.type === 'text') {
     const origX = shape.x || 0;
     const origY = shape.y || 0;
@@ -429,16 +430,18 @@ export function scaleConstructedShape(
       x: Math.round(newX),
       y: Math.round(newY),
       fontSize: newFontSize,
+      originalFontSize: shape.originalFontSize ?? shape.fontSize,
+      scale: newScale,
     };
   }
-  if (!shape.pathData) return shape;
+  if (!shape.pathData) return { ...shape, scale: newScale };
   const scope = getPaperScope();
   scope.activate();
   const item = new scope.CompoundPath(shape.pathData);
   item.scale(factor, new scope.Point(center.x, center.y));
   const pathData = item.pathData || '';
   item.remove();
-  return { ...shape, pathData };
+  return { ...shape, pathData, scale: newScale };
 }
 
 export function scaleConstructedShapes(
@@ -455,6 +458,41 @@ export function scaleConstructedShapes(
       : { x: 400, y: 400 };
   }
   return shapes.map((s) => scaleConstructedShape(s, factor, c!));
+}
+
+export function resetShapesScale(
+  shapes: ConstructedShape[],
+  center?: Point2D
+): ConstructedShape[] {
+  if (shapes.length === 0) return shapes;
+  const firstScale = shapes[0].scale ?? 1;
+  const allSameScale = shapes.every(
+    (s) => Math.abs((s.scale ?? 1) - firstScale) < 0.001
+  );
+
+  let groupCenter = center;
+  if (!groupCenter && allSameScale) {
+    const bbox = getShapesBoundingBox(shapes);
+    if (bbox) groupCenter = { x: bbox.x + bbox.width / 2, y: bbox.y + bbox.height / 2 };
+  }
+
+  return shapes.map((s) => {
+    const currentScale = s.scale ?? 1;
+    if (Math.abs(currentScale - 1) < 0.001) return s;
+    const factor = 1 / currentScale;
+    let c = groupCenter;
+    if (!c) {
+      const b = getShapeBounds(s);
+      c = b ? { x: b.x + b.width / 2, y: b.y + b.height / 2 } : { x: 400, y: 400 };
+    }
+    const rescaled = scaleConstructedShape(s, factor, c);
+    const finalFontSize = s.originalFontSize ?? rescaled.fontSize;
+    return {
+      ...rescaled,
+      ...(s.type === 'text' && finalFontSize ? { fontSize: finalFontSize } : {}),
+      scale: 1,
+    };
+  });
 }
 
 function getCornerPoint(handle: string, bbox: Bounds2D): Point2D {

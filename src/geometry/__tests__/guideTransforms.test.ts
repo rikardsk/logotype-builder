@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { ConstructedShape } from '../types';
 import {
   createLineGuide,
   createCircleGuide,
@@ -27,6 +28,7 @@ import {
   getShapesBoundingBox,
   scaleConstructedShape,
   scaleConstructedShapes,
+  resetShapesScale,
   calculateCornerScale,
   reorderShapes,
   getCanvasViewBox,
@@ -343,6 +345,63 @@ describe('guideTransforms', () => {
 
     const scaledAll = scaleConstructedShapes([pathShape, textShape], 1.2);
     expect(scaledAll).toHaveLength(2);
+    expect(scaledAll[0].scale).toBeCloseTo(1.2, 2);
+    expect(scaledAll[1].scale).toBeCloseTo(1.2, 2);
+  });
+
+  it('resets scaled shapes back to original scale and dimensions', () => {
+    const pathShape: ConstructedShape = {
+      id: 's1',
+      pathData: 'M 100 100 L 200 100 L 200 200 L 100 200 Z',
+      fillColor: '#fff',
+      createdAt: 1,
+    };
+    const textShape: ConstructedShape = {
+      id: 't1',
+      pathData: '',
+      type: 'text',
+      text: 'AB',
+      fontSize: 50,
+      originalFontSize: 50,
+      x: 100,
+      y: 250,
+      fillColor: '#fff',
+      createdAt: 2,
+    };
+
+    const initialBbox = getShapeBounds(pathShape);
+    expect(initialBbox?.width).toBeCloseTo(100, 0);
+
+    // Scale up by 1.5
+    const scaled = scaleConstructedShapes([pathShape, textShape], 1.5);
+    expect(scaled[0].scale).toBeCloseTo(1.5, 2);
+    expect(scaled[1].fontSize).toBe(75);
+
+    // Scale again by 1.2 (cumulative 1.8)
+    const scaledAgain = scaleConstructedShapes(scaled, 1.2);
+    expect(scaledAgain[0].scale).toBeCloseTo(1.8, 2);
+
+    // Reset back to original scale
+    const reset = resetShapesScale(scaledAgain);
+    expect(reset[0].scale).toBe(1);
+    expect(reset[1].scale).toBe(1);
+    expect(reset[1].fontSize).toBe(50);
+
+    const resetBbox = getShapeBounds(reset[0]);
+    expect(resetBbox?.width).toBeCloseTo(100, 0);
+    expect(resetBbox?.height).toBeCloseTo(100, 0);
+  });
+
+  it('leaves shapes already at original scale untouched', () => {
+    const shape: ConstructedShape = {
+      id: 's1',
+      pathData: 'M 100 100 L 200 100 L 200 200 L 100 200 Z',
+      fillColor: '#fff',
+      createdAt: 1,
+      scale: 1,
+    };
+    const reset = resetShapesScale([shape]);
+    expect(reset[0]).toBe(shape);
   });
 
   it('calculates anchor and factor for corner scaling', () => {

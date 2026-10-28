@@ -18,6 +18,7 @@ import {
   moveGuide,
   moveConstructedShape,
   scaleConstructedShapes,
+  resetShapesScale,
   getShapesBoundingBox,
   reorderShapes,
   resizeGuide,
@@ -218,6 +219,22 @@ export function useBuilderStore() {
     },
     [constructedShapes, selectedShapeIds, pushHistory]
   );
+
+  const resetScale = useCallback(() => {
+    const targetIds =
+      selectedShapeIds.length > 0
+        ? selectedShapeIds
+        : constructedShapes.filter((s) => s.visible !== false).map((s) => s.id);
+    if (targetIds.length === 0) return;
+
+    const targetShapes = constructedShapes.filter((s) => targetIds.includes(s.id));
+    const reset = resetShapesScale(targetShapes);
+    const map = new Map(reset.map((s) => [s.id, s]));
+    const updated = constructedShapes.map((s) => map.get(s.id) || s);
+
+    pushHistory();
+    setConstructedShapes(updated);
+  }, [constructedShapes, selectedShapeIds, pushHistory]);
 
   const centerLogo = useCallback(() => {
     if (constructedShapes.length === 0) return;
@@ -654,6 +671,7 @@ export function useBuilderStore() {
     commitShapeTransform,
     commitBatchShapesTransform,
     scaleShapes,
+    resetScale,
     deleteSelected,
     removeGuideById,
     removeShapeById,
