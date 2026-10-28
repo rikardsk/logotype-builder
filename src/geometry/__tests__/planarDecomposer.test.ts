@@ -109,4 +109,22 @@ describe('planarDecomposer', () => {
     expect(circleCell?.bounds.width).toBeCloseTo(100, 0);
     expect(circleCell?.bounds.height).toBeCloseTo(100, 0);
   });
+
+  it('creates an atomic shape between two circles connected by two lines', () => {
+    // Two circles horizontally separated
+    const c1 = createCircleGuide('c1', 200, 400, 80);
+    const c2 = createCircleGuide('c2', 600, 400, 80);
+    // Two lines bridging the two circles, starting inside c1 and ending inside c2
+    const l1 = createLineGuide('l1', 200, 360, 600, 360);
+    const l2 = createLineGuide('l2', 200, 440, 600, 440);
+
+    const faces = decomposeGuidesToAtomicFaces([c1, c2, l1, l2]);
+    // Must find the bridge face between the two circles (around center x=400, y=400)
+    const bridgeFace = faces.find(
+      (f) => f.center.x > 300 && f.center.x < 500 && Math.abs(f.center.y - 400) < 30
+    );
+    expect(bridgeFace).toBeDefined();
+    expect(bridgeFace?.bounds.width).toBeGreaterThan(200);
+    expect(bridgeFace?.bounds.height).toBeCloseTo(80, 0);
+  });
 });

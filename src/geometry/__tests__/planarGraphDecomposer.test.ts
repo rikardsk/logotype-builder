@@ -51,4 +51,20 @@ describe('planarGraphDecomposer', () => {
     expect(faces[0].center.x).toBeCloseTo(300, 0);
     expect(faces[0].center.y).toBeCloseTo(250, 0);
   });
+
+  it('extracts face between two circles connected by two lines', () => {
+    const c1 = createCircleGuide('c1', 200, 400, 80);
+    const c2 = createCircleGuide('c2', 600, 400, 80);
+    // Lines starting inside c1 (x=200) and ending inside c2 (x=600)
+    const l1 = createLineGuide('l1', 200, 360, 600, 360);
+    const l2 = createLineGuide('l2', 200, 440, 600, 440);
+
+    const faces = decomposeGuidesWithPlanarGraph([c1, c2, l1, l2]);
+    expect(faces.length).toBeGreaterThan(0);
+    // Let's verify what each face is:
+    const centers = faces.map((f) => ({ x: Math.round(f.center.x), y: Math.round(f.center.y) }));
+    // Must find bridge face around x=400, y=400
+    const hasBridge = centers.some((c) => Math.abs(c.x - 400) < 50 && Math.abs(c.y - 400) < 30);
+    expect(hasBridge).toBe(true);
+  });
 });

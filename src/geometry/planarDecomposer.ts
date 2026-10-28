@@ -7,6 +7,7 @@ import {
 } from './paperScope';
 import { decomposeGuidesWithPlanarGraph } from './planarGraphDecomposer';
 import { getParallelEndpoints } from './scaffolds';
+import { isPointInPath } from './shapeMerger';
 
 export function extractConnectedFaces(
   item: PathItem,
@@ -221,12 +222,39 @@ function decomposeClosedShapes(
   return atomicPaths;
 }
 
+function sliceClosedPathsWithLines(
+  closedPaths: PathItem[],
+  lineGuides: GuideShape[],
+  scope: PaperScope
+): PathItem[] {
+  let current = closedPaths;
+  for (const guide of lineGuides) {
+    for (const seg of getLineSegments(guide)) {
+      const next: PathItem[] = [];
+      for (const face of current) {
+        next.push(...sliceFaceWithLine(face, seg.p1, seg.p2, scope));
+      }
+      current = next;
+    }
+  }
+  return current;
+}
+
+function findExternalGraphCells(
+  guides: GuideShape[],
+  closedGuides: GuideShape[]
+): AtomicFace[] {
+  const graphCells = decomposeGuidesWithPlanarGraph(guides);
+  return graphCells.filter((cell) => {
+    return !closedGuides.some((cg) => isPointInPath(cg.pathData, cell.center));
+  });
+}
+
 export function decomposeGuidesToAtomicFaces(guides: GuideShape[]): AtomicFace[] {
   if (guides.length === 0) return [];
 
   const lineGuides = guides.filter((g) => g.type === 'line' || g.type === 'parallel');
   const closedGuides = guides.filter((g) => g.type !== 'line' && g.type !== 'parallel');
-
   if (closedGuides.length === 0) {
     return decomposeGuidesWithPlanarGraph(guides);
   }
@@ -235,28 +263,17 @@ export function decomposeGuidesToAtomicFaces(guides: GuideShape[]): AtomicFace[]
   scope.activate();
   scope.project.clear();
 
-  const closedShapesData = closedGuides.map((g) => g.pathData).filter(Boolean);
-  let closedAtomicPaths = decomposeClosedShapes(closedShapesData, scope);
+  const closedData = closedGuides.map((g) => g.pathData).filter(Boolean);
+  const closedAtomic = decomposeClosedShapes(closedData, scope);
+  const slicedClosed = sliceClosedPathsWithLines(closedAtomic, lineGuides, scope);
 
-  for (const guide of lineGuides) {
-    for (const seg of getLineSegments(guide)) {
-      const nextAtomic: PathItem[] = [];
-      for (const face of closedAtomicPaths) {
-        nextAtomic.push(...sliceFaceWithLine(face, seg.p1, seg.p2, scope));
-      }
-      closedAtomicPaths = nextAtomic;
-    }
-  }
-
-  const totalLineSegments = lineGuides.flatMap(getLineSegments);
-  const lineCells = totalLineSegments.length >= 3 ? decomposeGuidesWithPlanarGraph(lineGuides) : [];
+  const externalCells = lineGuides.length > 0 ? findExternalGraphCells(guides, closedGuides) : [];
   const allShapesData = [
-    ...closedAtomicPaths.map((p) => p.pathData).filter(Boolean),
-    ...lineCells.map((c) => c.pathData),
+    ...slicedClosed.map((p) => p.pathData).filter(Boolean),
+    ...externalCells.map((c) => c.pathData),
   ];
 
   const atomicPaths = decomposeClosedShapes(allShapesData, scope);
-
   return atomicPaths.map((p, index) => ({
     id: `face-${index}`,
     pathData: p.pathData,
