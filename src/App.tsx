@@ -64,6 +64,17 @@ export const App: React.FC = () => {
         return;
       }
 
+      if (e.shiftKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        store.mirrorSelection('horizontal', true);
+        return;
+      }
+      if (e.shiftKey && e.key.toLowerCase() === 'h') {
+        e.preventDefault();
+        store.mirrorSelection('horizontal', false);
+        return;
+      }
+
       if (e.altKey) store.setIsAltHeld(true);
       if (e.key.toLowerCase() === 'v') store.setMode('select');
       if (e.key.toLowerCase() === 'm') store.setMode('merge');
@@ -210,6 +221,7 @@ export const App: React.FC = () => {
         hasConstructedShapes={store.constructedShapes.length > 0}
         isArtboardCropped={store.isArtboardCropped}
         onCenterLogo={store.centerLogo}
+        onMirrorLogo={() => store.mirrorSelection('horizontal', true)}
         onCropCanvas={store.cropCanvasToLogo}
         onResetArtboard={store.resetArtboard}
       />
@@ -260,6 +272,7 @@ export const App: React.FC = () => {
           onReorderShape={store.reorderShape}
           onToggleVisibility={store.toggleShapeVisibility}
           onUniteShapes={store.uniteShapes}
+          onMirrorSelection={store.mirrorSelection}
           showShapeOutlines={store.showShapeOutlines}
           onToggleOutlines={store.toggleShapeOutlines}
         />

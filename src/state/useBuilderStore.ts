@@ -24,6 +24,7 @@ import {
   resizeGuide,
 } from '../geometry/guideTransforms';
 import { roundShapesCorners } from '../geometry/cornerRounding';
+import { mirrorShapesBatch, mirrorGuidesBatch } from '../geometry/bilateralMirror';
 
 export const COLOR_PALETTES = [
   '#6366f1', // Indigo
@@ -511,6 +512,51 @@ export function useBuilderStore() {
     pasteClipboard();
   }, [copySelection, pasteClipboard]);
 
+  const mirrorSelection = useCallback(
+    (
+      axis: 'horizontal' | 'vertical' = 'horizontal',
+      duplicate = true,
+      origin: 'artboard' | 'selection' = 'artboard'
+    ) => {
+      const hasGuides = selectedGuideIds.length > 0;
+      const hasShapes = selectedShapeIds.length > 0;
+      if (!hasGuides && !hasShapes && constructedShapes.length === 0) return;
+
+      let center = {
+        x: artboard.x + artboard.width / 2,
+        y: artboard.y + artboard.height / 2,
+      };
+
+      if (origin === 'selection') {
+        const target = constructedShapes.filter((s) => selectedShapeIds.includes(s.id));
+        const bbox = getShapesBoundingBox(target);
+        if (bbox) center = { x: bbox.x + bbox.width / 2, y: bbox.y + bbox.height / 2 };
+      }
+
+      pushHistory();
+      const prefix = `${Date.now()}`;
+
+      if (hasGuides) {
+        const res = mirrorGuidesBatch(guides, selectedGuideIds, center, axis, duplicate, prefix);
+        setGuides(res.updatedGuides);
+        setSelectedGuideIds(res.newSelectedIds);
+      }
+
+      const shapeTargetIds = hasShapes
+        ? selectedShapeIds
+        : !hasGuides
+        ? constructedShapes.filter((s) => s.visible !== false).map((s) => s.id)
+        : [];
+
+      if (shapeTargetIds.length > 0) {
+        const res = mirrorShapesBatch(constructedShapes, shapeTargetIds, center, axis, duplicate, prefix);
+        setConstructedShapes(res.updatedShapes);
+        setSelectedShapeIds(res.newSelectedIds);
+      }
+    },
+    [artboard, selectedGuideIds, selectedShapeIds, guides, constructedShapes, pushHistory]
+  );
+
   const mergeFaceIds = useCallback(
     (faceIds: string[]) => {
       if (faceIds.length === 0) return;
@@ -713,6 +759,7 @@ export function useBuilderStore() {
     copySelection,
     pasteClipboard,
     duplicateSelection,
+    mirrorSelection,
     setBackgroundImage: useCallback((url: string, width = 800, height = 800) => {
       const x = Math.round((800 - width) / 2);
       const y = Math.round((800 - height) / 2);

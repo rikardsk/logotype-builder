@@ -14,6 +14,7 @@ import {
   Eye,
   EyeOff,
   Combine,
+  FlipHorizontal,
 } from 'lucide-react';
 import { ConstructedShape } from '../../geometry/types';
 
@@ -32,6 +33,7 @@ interface ShapesPanelProps {
   onReorderShape?: (id: string, direction: 'up' | 'down') => void;
   onToggleVisibility?: (id: string) => void;
   onUniteShapes?: () => void;
+  onMirrorSelection?: (axis?: 'horizontal' | 'vertical', duplicate?: boolean) => void;
   showShapeOutlines?: boolean;
   onToggleOutlines?: () => void;
 }
@@ -51,6 +53,7 @@ export const ShapesPanel: React.FC<ShapesPanelProps> = ({
   onReorderShape,
   onToggleVisibility,
   onUniteShapes,
+  onMirrorSelection,
   showShapeOutlines = true,
   onToggleOutlines,
 }) => {
@@ -129,6 +132,30 @@ export const ShapesPanel: React.FC<ShapesPanelProps> = ({
               : 'Unite All Shapes'}
           </span>
         </button>
+      )}
+
+      {/* Bilateral Mirror (Flip & Duplicate) Quick Actions */}
+      {onMirrorSelection && (
+        <div className="grid grid-cols-2 gap-1.5 text-xs">
+          <button
+            type="button"
+            title="Bilateral Mirror (Flip & Duplicate): Reflects horizontally across canvas center to complete symmetrical logo [Hotkey: Shift+M]"
+            onClick={() => onMirrorSelection('horizontal', true)}
+            className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/35 text-indigo-300 hover:text-white border border-indigo-500/30 transition-all active:scale-95 text-[11px] font-medium shadow-sm"
+          >
+            <FlipHorizontal className="w-3.5 h-3.5" />
+            <span>Mirror & Dup</span>
+          </button>
+          <button
+            type="button"
+            title="Flip Horizontal: Invert left-to-right across canvas center [Hotkey: Shift+H]"
+            onClick={() => onMirrorSelection('horizontal', false)}
+            className="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition-all active:scale-95 text-[11px] font-medium"
+          >
+            <FlipHorizontal className="w-3.5 h-3.5 text-zinc-400" />
+            <span>Flip Horiz</span>
+          </button>
+        </div>
       )}
 
       {/* Quick Scale Control */}

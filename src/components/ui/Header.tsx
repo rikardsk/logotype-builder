@@ -10,6 +10,7 @@ import {
   RotateCw,
   AlignCenter,
   Crop,
+  FlipHorizontal,
 } from 'lucide-react';
 import { BackgroundImageConfig, ScaffoldConfig, LogoProjectData } from '../../geometry/types';
 import {
@@ -42,6 +43,7 @@ interface HeaderProps {
   hasConstructedShapes?: boolean;
   isArtboardCropped?: boolean;
   onCenterLogo?: () => void;
+  onMirrorLogo?: () => void;
   onCropCanvas?: () => void;
   onResetArtboard?: () => void;
 }
@@ -68,6 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
   hasConstructedShapes = false,
   isArtboardCropped = false,
   onCenterLogo,
+  onMirrorLogo,
   onCropCanvas,
   onResetArtboard,
 }) => {
@@ -196,6 +199,21 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <AlignCenter className="w-3.5 h-3.5 text-indigo-400" />
               <span className="hidden xl:inline text-[11px] font-medium">Center</span>
+            </button>
+            <div className="w-[1px] h-4 bg-white/10" />
+            <button
+              type="button"
+              title="Bilateral Mirror (Flip & Duplicate): Reflect across canvas center [Hotkey: Shift+M]"
+              disabled={!hasConstructedShapes}
+              onClick={onMirrorLogo}
+              className={`h-7 px-2 rounded-lg flex items-center gap-1.5 transition-all text-xs ${
+                hasConstructedShapes
+                  ? 'text-zinc-300 hover:text-white hover:bg-white/5 active:scale-95'
+                  : 'text-zinc-600 cursor-not-allowed opacity-40'
+              }`}
+            >
+              <FlipHorizontal className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden xl:inline text-[11px] font-medium">Mirror</span>
             </button>
             <div className="w-[1px] h-4 bg-white/10" />
             <button
@@ -341,6 +359,14 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex justify-between items-center py-1 border-b border-white/5">
                 <span>Duplicate Selected</span>
                 <kbd className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-white/10">Ctrl + D</kbd>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span>Bilateral Mirror (Flip & Duplicate)</span>
+                <kbd className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-white/10">Shift + M</kbd>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-white/5">
+                <span>Flip Horizontal In-Place</span>
+                <kbd className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-200 border border-white/10">Shift + H</kbd>
               </div>
               <div className="flex justify-between items-center py-1 border-b border-white/5">
                 <span>Scale Logo Down / Up</span>
