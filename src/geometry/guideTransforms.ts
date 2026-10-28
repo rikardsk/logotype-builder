@@ -354,7 +354,14 @@ export function moveConstructedShape(
   item.translate(new scope.Point(dx, dy));
   const pathData = item.pathData || '';
   item.remove();
-  return { ...shape, pathData };
+  let rawPathData = shape.rawPathData;
+  if (rawPathData) {
+    const rawItem = new scope.CompoundPath(rawPathData);
+    rawItem.translate(new scope.Point(dx, dy));
+    rawPathData = rawItem.pathData || '';
+    rawItem.remove();
+  }
+  return { ...shape, pathData, rawPathData };
 }
 
 export function getShapeBounds(shape: ConstructedShape): Bounds2D | null {
@@ -441,7 +448,14 @@ export function scaleConstructedShape(
   item.scale(factor, new scope.Point(center.x, center.y));
   const pathData = item.pathData || '';
   item.remove();
-  return { ...shape, pathData, scale: newScale };
+  let rawPathData = shape.rawPathData;
+  if (rawPathData) {
+    const rawItem = new scope.CompoundPath(rawPathData);
+    rawItem.scale(factor, new scope.Point(center.x, center.y));
+    rawPathData = rawItem.pathData || '';
+    rawItem.remove();
+  }
+  return { ...shape, pathData, rawPathData, scale: newScale };
 }
 
 export function scaleConstructedShapes(

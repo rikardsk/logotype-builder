@@ -23,6 +23,7 @@ import {
   reorderShapes,
   resizeGuide,
 } from '../geometry/guideTransforms';
+import { roundShapesCorners } from '../geometry/cornerRounding';
 
 export const COLOR_PALETTES = [
   '#6366f1', // Indigo
@@ -235,6 +236,32 @@ export function useBuilderStore() {
     pushHistory();
     setConstructedShapes(updated);
   }, [constructedShapes, selectedShapeIds, pushHistory]);
+
+  const setCornerRadius = useCallback(
+    (radius: number, targetIds?: string[]) => {
+      const clampedRadius = Math.max(0, Math.min(50, Math.round(radius)));
+      const ids =
+        targetIds && targetIds.length > 0
+          ? targetIds
+          : selectedShapeIds.length > 0
+          ? selectedShapeIds
+          : constructedShapes.filter((s) => s.visible !== false).map((s) => s.id);
+      if (ids.length === 0) return;
+
+      const targetShapes = constructedShapes.filter(
+        (s) => ids.includes(s.id) && s.type !== 'text'
+      );
+      if (targetShapes.length === 0) return;
+
+      const updatedShapes = roundShapesCorners(targetShapes, clampedRadius);
+      const map = new Map(updatedShapes.map((s) => [s.id, s]));
+      const updated = constructedShapes.map((s) => map.get(s.id) || s);
+
+      pushHistory();
+      setConstructedShapes(updated);
+    },
+    [constructedShapes, selectedShapeIds, pushHistory]
+  );
 
   const centerLogo = useCallback(() => {
     if (constructedShapes.length === 0) return;
@@ -672,6 +699,7 @@ export function useBuilderStore() {
     commitBatchShapesTransform,
     scaleShapes,
     resetScale,
+    setCornerRadius,
     deleteSelected,
     removeGuideById,
     removeShapeById,

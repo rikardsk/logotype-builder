@@ -252,6 +252,7 @@ export const App: React.FC = () => {
           onRemoveShape={store.removeShapeById}
           onScaleShapes={store.scaleShapes}
           onResetScale={store.resetScale}
+          onApplyCornerRadius={store.setCornerRadius}
           onCenterLogo={store.centerLogo}
           onCropCanvas={store.cropCanvasToLogo}
           onResetArtboard={store.resetArtboard}

@@ -40,6 +40,8 @@ export interface ConstructedShape {
   letterSpacing?: number;
   visible?: boolean;
   scale?: number;
+  rawPathData?: string;
+  cornerRadius?: number;
 }
 
 export interface GuideShape {
